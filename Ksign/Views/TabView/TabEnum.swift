@@ -16,6 +16,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	case certificates
 	case appstore
     case downloader
+
 	var title: String {
 		switch self {
         case .files:        return .localized("Files")
@@ -30,13 +31,13 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	var icon: String {
 		switch self {
-        case .files:        return "folder.fill"
-		case .sources: 		return "globe.desk"
-		case .library: 		return "square.grid.2x2"
-		case .settings: 	return "gearshape.2"
-		case .certificates: return "person.text.rectangle"
-		case .appstore: 	return "plus.app.fill"
-        case .downloader:    return "square.and.arrow.down.fill"
+        case .files:        return "doc.on.doc.fill"
+		case .sources: 		return "network"
+		case .library: 		return "square.stack.3d.up.fill"
+		case .settings: 	return "slider.horizontal.3"
+		case .certificates: return "checkmark.seal.fill"
+		case .appstore: 	return "bag.fill"
+        case .downloader:   return "arrow.down.circle.fill"
 		}
 	}
 	
@@ -65,7 +66,8 @@ enum TabEnum: String, CaseIterable, Hashable {
 	
 	static var customizableTabs: [TabEnum] {
 		return [
-			.certificates
+			.certificates,
+			.sources
 		]
 	}
 }
