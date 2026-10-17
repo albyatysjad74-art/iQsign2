@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build Beta
+    name: Build iQsign
     runs-on: macos-14
 
     steps:
@@ -17,45 +17,56 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Set up Xcode 16
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: "^16.0"
-
-      - name: Build Project
+      - name: Select Stable Xcode 15.4
         run: |
-          make OTHER_SWIFT_FLAGS="-strict-concurrency=minimal"
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          xcodebuild -version
 
-      - name: Rename IPA to iQsign
+      - name: Downgrade Project Format & Build IPA
         run: |
-          mkdir -p packages
-          if [ -f packages/Ksign.ipa ]; then
-            mv packages/Ksign.ipa packages/iQsign.ipa
-          fi
+          # 1. تحويل صيغة المشروع من 77 إلى 56 ليقبل الفتح على Xcode 15.4 بدون أخطاء Swift 6
+          sed -i '' 's/objectVersion = 77;/objectVersion = 56;/g' Ksign.xcodeproj/project.pbxproj
+          sed -i '' 's/minimizedProjectReferenceProxies = 1;//g' Ksign.xcodeproj/project.pbxproj
+          sed -i '' 's/preferredProjectObjectVersion = 77;//g' Ksign.xcodeproj/project.pbxproj
+
+          # 2. بناء المشروع مباشرة مع فرض Swift 5 وإلغاء التوقيع
+          xcodebuild \
+            -project Ksign.xcodeproj \
+            -scheme "Ksign" \
+            -configuration Release \
+            -arch arm64 \
+            -sdk iphoneos \
+            -derivedDataPath build_data \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO \
+            SWIFT_VERSION=5.0 \
+            SWIFT_STRICT_CONCURRENCY=minimal
+
+          # 3. استخراج ملف الـ .app وتحويله إلى ملف iQsign.ipa جاهز
+          mkdir -p packages Payload
+          APP_PATH=$(find build_data -name "*.app" -type d | head -n 1)
+          cp -r "$APP_PATH" Payload/
+          zip -vr packages/iQsign.ipa Payload -x "*.DS_Store"
 
       - name: Upload iQsign IPA (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: iQsign-IPA
-          path: packages/*.ipa
+          path: packages/iQsign.ipa
           retention-days: 7
 
-      - name: Update Beta Release
+      - name: Publish Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          LATEST_OFFICIAL_TAG=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || echo "")
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "## iQsign Official Build - Commit: \`$COMMIT_MSG\`" > release_notes.md
-          echo "### Commit SHA: ${{ github.sha }}" >> release_notes.md
-
           gh release delete beta --cleanup-tag -y || true
-          
-          IPA_FILE=$(ls packages/*.ipa | head -n 1)
-          if [ -f "$IPA_FILE" ]; then
-            gh release create beta "$IPA_FILE" \
-              --title "iQsign Latest Build" \
-              --notes "$(cat release_notes.md)" \
+          if [ -f "packages/iQsign.ipa" ]; then
+            gh release create beta "packages/iQsign.ipa" \
+              --title "iQsign v1.00" \
+              --notes "Official iQsign Build" \
               --prerelease \
               --target ${{ github.sha }}
           fi
