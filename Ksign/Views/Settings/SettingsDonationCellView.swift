@@ -1,16 +1,13 @@
 //
 //  SettingsDonationCellView.swift
-//  Feather
-//
-//  Created by samara on 30.04.2025.
+//  iQsign
 //
 
-//#if !NIGHTLY && !DEBUG
 import SwiftUI
 import NimbleViews
 
 struct SettingsDonationCellView: View {
-	var site: String
+	var site: String = "https://t.me/x_arw"
 	
 	var body: some View {
 		Section {
@@ -18,15 +15,17 @@ struct SettingsDonationCellView: View {
 				_title()
 				
 				_benefit(
-					.localized("Show Your Support"),
-					.localized("Show your support by donating! If you're unable to donate, spreading the word works too!"),
-					systemName: "heart.fill"
+					"شهادات سنوية مضمونة",
+					"تفعيل فوري مع ضمان استمرار التطبيقات بدون توقف، تواصل معنا للاشتراك.",
+					systemName: "checkmark.seal.fill"
 				)
 				
-				Button() {
-					UIApplication.open(site)
+				Button {
+					if let url = URL(string: "https://t.me/x_arw") {
+						UIApplication.shared.open(url)
+					}
 				} label: {
-					_sheetButton(.localized("Donate"))
+					_sheetButton("طلب اشتراك فوري")
 				}
 				.frame(height: 45)
 			}
@@ -38,10 +37,22 @@ struct SettingsDonationCellView: View {
 	@ViewBuilder
 	private func _title() -> some View {
 		VStack(alignment: .center, spacing: 12) {
-            Image(uiImage: (UIImage(named: "Kana_love"))!).resizable().frame(width: 60, height: 60)
+			AsyncImage(url: URL(string: "https://i.postimg.cc/K8dLKwjS/6788CEFF-040E-4A1F-841F-7291FB480CC9.jpg")) { phase in
+				switch phase {
+				case .success(let image):
+					image
+						.resizable()
+						.scaledToFill()
+				default:
+					ProgressView()
+				}
+			}
+			.frame(width: 65, height: 65)
+			.clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+			.shadow(color: .black.opacity(0.12), radius: 5, x: 0, y: 2)
 			
-			Text(.localized("Donations"))
-				.font(.title)
+			Text("iQsign VIP")
+				.font(.title2)
 				.bold()
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -55,9 +66,9 @@ struct SettingsDonationCellView: View {
 	) -> some View {
 		HStack(alignment: .center, spacing: 14) {
 			Image(systemName: systemName)
-				.font(.system(size: 32))
+				.font(.system(size: 30))
 				.foregroundStyle(.tint)
-				.frame(width: 39, alignment: .center)
+				.frame(width: 38, alignment: .center)
 			
 			NBTitleWithSubtitleView(
 				title: title,
@@ -78,5 +89,3 @@ struct SettingsDonationCellView: View {
 			.bold()
 	}
 }
-
-//#endif
