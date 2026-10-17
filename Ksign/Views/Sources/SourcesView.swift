@@ -12,10 +12,13 @@ import NimbleViews
 
 // MARK: - View
 struct SourcesView: View {
+	@Environment(\.managedObjectContext) private var viewContext
 	@StateObject var viewModel = SourcesViewModel.shared
 	@State private var _isAddingPresenting = false
 	@State private var _addingSourceLoading = false
 	@State private var _searchText = ""
+	
+	private let _defaultSourceURL = "https://raw.githubusercontent.com/ikiraplus/ipastore/main/jom.json"
 	
 	private var _filteredSources: [AltSource] {
 		_sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
@@ -97,7 +100,25 @@ struct SourcesView: View {
 			}
 		}
 		.task(id: Array(_sources)) {
+			_checkAndAddDefaultSource()
 			await viewModel.fetchSources(_sources)
+		}
+	}
+	
+	// MARK: - Helper Methods
+	private func _checkAndAddDefaultSource() {
+		guard _sources.isEmpty, let url = URL(string: _defaultSourceURL) else { return }
+		
+		let newSource = AltSource(context: viewContext)
+		newSource.name = "iQStore"
+		newSource.identifier = url.absoluteString
+		newSource.sourceURL = url
+		newSource.dateAdded = Date()
+		
+		do {
+			try viewContext.save()
+		} catch {
+			print("Failed to save default source: \(error)")
 		}
 	}
 }
