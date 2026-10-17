@@ -17,14 +17,14 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Select Xcode Version
+      - name: Select Xcode 16
         run: |
-          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
           xcodebuild -version
 
       - name: Build Project
         run: |
-          make
+          make OTHER_SWIFT_FLAGS="-strict-concurrency=minimal"
 
       - name: Rename IPA to iQsign
         run: |
