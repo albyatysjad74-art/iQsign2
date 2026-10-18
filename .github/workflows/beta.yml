@@ -22,26 +22,41 @@ jobs:
         with:
           xcode-version: "16.2"
 
-      - name: Fix Swift 6 Sendable in Project & Build
+      - name: Fix Deployment Target & Build IPA
         run: |
-          # ضبط التزامن داخل ملف إعدادات المشروع نفسه دون التأثير على مكتبة NimbleKit
+          # 1. خفض إصدار النظام المطلوب إلى iOS 16.0 لحل مشكلة Found no destinations
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' Ksign.xcodeproj/project.pbxproj
+          
+          # 2. إيقاف تدقيق Swift 6 الصارم داخل المشروع
           sed -i '' 's/SWIFT_VERSION = 6.0;/SWIFT_VERSION = 5.0;/g' Ksign.xcodeproj/project.pbxproj
           sed -i '' 's/SWIFT_STRICT_CONCURRENCY = complete;/SWIFT_STRICT_CONCURRENCY = minimal;/g' Ksign.xcodeproj/project.pbxproj
 
-          # تشغيل أمر البناء الأصلي للمستودع
-          make
+          # 3. البناء المباشر مع تحديد الوجهة generic/platform=iOS
+          xcodebuild \
+            -project Ksign.xcodeproj \
+            -scheme "Ksign" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -arch arm64 \
+            -sdk iphoneos \
+            -derivedDataPath build_data \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
 
-          # تجهيز ملف iQsign.ipa
-          mkdir -p packages
-          if [ -f packages/Ksign.ipa ]; then
-            cp packages/Ksign.ipa packages/iQsign.ipa
-          fi
+          # 4. تجميع ملف iQsign.ipa
+          mkdir -p packages Payload
+          APP_PATH=$(find build_data -name "*.app" -type d | head -n 1)
+          cp -r "$APP_PATH" Payload/
+          zip -vr packages/iQsign.ipa Payload -x "*.DS_Store"
 
       - name: Upload iQsign IPA (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: iQsign-IPA
-          path: packages/*.ipa
+          path: packages/iQsign.ipa
           retention-days: 7
 
       - name: Publish Release
@@ -49,9 +64,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete beta --cleanup-tag -y || true
-          IPA_FILE=$(ls packages/*.ipa | head -n 1)
-          if [ -f "$IPA_FILE" ]; then
-            gh release create beta "$IPA_FILE" \
+          if [ -f "packages/iQsign.ipa" ]; then
+            gh release create beta "packages/iQsign.ipa" \
               --title "iQsign v1.00" \
               --notes "Official iQsign Build" \
               --prerelease \
