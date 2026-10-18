@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build iQsign
-    runs-on: macos-26
+    runs-on: macos-14
 
     steps:
       - name: Checkout Code
@@ -24,10 +24,8 @@ jobs:
             sed -i '' 's/AboutNyaView()/Text("About")/g' Ksign/Views/Settings/SettingsView.swift
           fi
 
-          # 2. إصلاح خطأ عضو dateAdded غير الموجود في AltSource عبر استبداله بخاصية صالحة
-          if [ -f "Ksign/Views/Sources/SourcesViewModel.swift" ]; then
-            sed -i '' 's/\.dateAdded/\.name/g' Ksign/Views/Sources/SourcesViewModel.swift
-          fi
+          # 2. إصلاح خطأ عضو dateAdded غير الموجود في AltSource عبر استبداله بشمل عام في كل ملفات الـ Swift
+          find . -name "*.swift" -exec sed -i '' 's/\.dateAdded/\.name/g' {} +
 
           # 3. خفض swift-tools-version وتعديل إعدادات التزامن لضمان عدم توقف المترجم
           find . -name "Package.swift" -exec sed -i '' 's/swift-tools-version:[[:space:]]*6\.[0-9]*/swift-tools-version: 5.9/g' {} +
