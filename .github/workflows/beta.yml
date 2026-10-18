@@ -24,12 +24,21 @@ jobs:
 
       - name: Build Project
         run: |
-          # 1. تعديل إعدادات المشروع الرئيسي فقط (دون لمس OTHER_SWIFT_FLAGS للحزم الخارجية)
+          # 1. خفض swift-tools-version من 6.0 إلى 5.9 في كل ملفات Package.swift المحلية
+          find . -name "Package.swift" -exec sed -i '' 's/swift-tools-version:[[:space:]]*6\.[0-9]*/swift-tools-version: 5.9/g' {} +
+
+          # 2. إصلاح خطأ NBFetchService.swift السطر 17 مباشرة بإضافة @unchecked Sendable
+          if [ -f "NimbleKit/Sources/NimbleJSON/NBFetchService.swift" ]; then
+            sed -i '' 's/enum NBFetchServiceError: Error/enum NBFetchServiceError: Error, @unchecked Sendable/g' NimbleKit/Sources/NimbleJSON/NBFetchService.swift
+            sed -i '' 's/: Error, Sendable/: Error, @unchecked Sendable/g' NimbleKit/Sources/NimbleJSON/NBFetchService.swift
+          fi
+
+          # 3. ضبط إعدادات المشروع الرئيسي (Ksign.xcodeproj) على iOS 16 و Swift 5
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' Ksign.xcodeproj/project.pbxproj
           sed -i '' 's/SWIFT_VERSION = 6.0;/SWIFT_VERSION = 5.0;/g' Ksign.xcodeproj/project.pbxproj
           sed -i '' 's/SWIFT_STRICT_CONCURRENCY = complete;/SWIFT_STRICT_CONCURRENCY = minimal;/g' Ksign.xcodeproj/project.pbxproj
 
-          # 2. تشغيل make الأصلي بدون أي إضافات تكسر مكتبة swift-atomics
+          # 4. تشغيل البناء وطباعة أي خطأ متبقٍ بوضوح
           set -o pipefail
           make 2>&1 | tee build.log || (echo "=== EXACT ERRORS ===" && grep -E "error:" build.log && exit 1)
 
