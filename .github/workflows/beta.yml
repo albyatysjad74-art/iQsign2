@@ -24,20 +24,19 @@ jobs:
 
       - name: Fix Deployment Target & Build IPA
         run: |
-          # 1. خفض إصدار النظام المطلوب إلى iOS 16.0 لحل مشكلة Found no destinations
+          # 1. خفض إصدار النظام المطلوب إلى iOS 16.0 في المشروع والحزم المحلية
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' Ksign.xcodeproj/project.pbxproj
           
           # 2. إيقاف تدقيق Swift 6 الصارم داخل المشروع
           sed -i '' 's/SWIFT_VERSION = 6.0;/SWIFT_VERSION = 5.0;/g' Ksign.xcodeproj/project.pbxproj
           sed -i '' 's/SWIFT_STRICT_CONCURRENCY = complete;/SWIFT_STRICT_CONCURRENCY = minimal;/g' Ksign.xcodeproj/project.pbxproj
 
-          # 3. البناء المباشر مع تحديد الوجهة generic/platform=iOS
+          # 3. البناء المباشر بدون تعارض المعمارية
           xcodebuild \
             -project Ksign.xcodeproj \
             -scheme "Ksign" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -arch arm64 \
             -sdk iphoneos \
             -derivedDataPath build_data \
             -skipPackagePluginValidation \
