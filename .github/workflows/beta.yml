@@ -24,13 +24,22 @@ jobs:
 
       - name: Build Project
         run: |
-          # 1. ضبط إعدادات المشروع لتجنب تعارض Swift 6 دون كسر الحزم
+          # 1. خفض إصدار iOS وإيقاف Swift 6 الصارم في المشروع الرئيسي
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' Ksign.xcodeproj/project.pbxproj
           sed -i '' 's/SWIFT_VERSION = 6.0;/SWIFT_VERSION = 5.0;/g' Ksign.xcodeproj/project.pbxproj
           sed -i '' 's/SWIFT_STRICT_CONCURRENCY = complete;/SWIFT_STRICT_CONCURRENCY = minimal;/g' Ksign.xcodeproj/project.pbxproj
 
-          # 2. تشغيل أمر make الأصلي الخاص بالمستودع على macos-14
-          make
+          # 2. إجبار الحزم المحلية (NimbleKit وغيرها) على استخدام Swift 5 وعدم الفشل
+          find . -name "Package.swift" -exec sed -i '' 's/swift-tools-version: *6\.[0-9]*/swift-tools-version: 5.9/g' {} +
+          find . -name "Package.swift" -exec sed -i '' 's/\.swiftLanguageMode(\.v6)/\.swiftLanguageMode(\.v5)/g' {} +
+          find . -name "Package.swift" -exec sed -i '' 's/\.enableExperimentalFeature("StrictConcurrency")//g' {} +
+
+          # 3. تعديل الـ makefile لتمرير أعلام التوافقية لكل الحزم أثناء البناء
+          sed -i '' 's/ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO/ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO SWIFT_STRICT_CONCURRENCY=minimal OTHER_SWIFT_FLAGS="-strict-concurrency=minimal"/g' makefile
+
+          # 4. تشغيل البناء وحفظ السجل، وإذا حدث أي خطأ يطبع السطور الحمراء فقط بوضوح
+          set -o pipefail
+          make 2>&1 | tee build.log || (echo "=== EXACT ERRORS ===" && grep -E "error:" build.log && exit 1)
 
       - name: Rename IPA to iQsign
         run: |
